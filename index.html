@@ -1,0 +1,60 @@
+<!doctype html>
+<!--
+Copyright 2018 The Go Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<html>
+
+<head>
+	<meta charset="utf-8">
+    <title>Go wasm</title>
+		<link rel="stylesheet" href="node_modules/todomvc-common/base.css">
+		<link rel="stylesheet" href="node_modules/todomvc-app-css/index.css">
+</head>
+
+<body>
+   <header class="header"></header>
+    <hello-world id="hello-world"/>
+    <section class="main" id="thing" >Please wait...</section>
+
+<script >
+  makeComponent = function(name, init) {
+    const Element = class extends HTMLElement {
+      constructor() {
+        super();
+        init(this);
+      }
+    };
+
+    customElements.define(name, Element);
+  };
+</script>
+	<script src="wasm_exec.js" ></script>
+
+	<script defer>
+		if (!WebAssembly.instantiateStreaming) { // polyfill
+			WebAssembly.instantiateStreaming = async (resp, importObject) => {
+				const source = await (await resp).arrayBuffer();
+				return await WebAssembly.instantiate(source, importObject);
+			};
+		}
+
+		const go = new Go();
+		let mod, inst;
+		WebAssembly.instantiateStreaming(fetch("test.wasm"), go.importObject).then((result) => {
+			mod = result.module;
+			inst = result.instance;
+            run();
+		});
+
+		async function run() {
+			console.clear();
+			await go.run(inst);
+			inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
+		}
+	</script>
+
+</body>
+
+</html>
